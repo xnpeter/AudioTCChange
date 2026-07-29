@@ -1,4 +1,4 @@
-const CACHE_NAME = "bwf-timecode-batch-v0.4.13";
+const CACHE_NAME = "bwf-timecode-batch-v0.4.16";
 const APP_ASSETS = [
   "./",
   "./index.html",
@@ -9,6 +9,7 @@ const APP_ASSETS = [
   "./src/dialogs.js",
   "./src/file-import.js",
   "./src/fps-metadata.js",
+  "./src/fps-write-controller.js",
   "./src/grouping.js",
   "./src/ltc-decoder.js",
   "./src/ltc-controller.js",
@@ -29,6 +30,7 @@ const APP_ASSETS = [
   "./src/video-metadata.js",
   "./src/wave-audio.js",
   "./src/wave-combine.js",
+  "./src/wave-fps-metadata.js",
   "./src/wave.js",
   "./src/wave-time-reference.js",
   "./bwf-timecode.webmanifest",

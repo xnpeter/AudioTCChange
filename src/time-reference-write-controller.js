@@ -50,7 +50,7 @@ export function createTimeReferenceWriteController({
   async function refreshRecordsFromHandles() {
     const current = getRecords();
     const refreshed = await Promise.all(current.map(record => {
-      if (record._meta) return record;
+      if (record._meta || record._video) return record;
       return scanWave(record.fileHandle, {
         relativePath: record.relativePath,
         parentPath: record.parentPath,

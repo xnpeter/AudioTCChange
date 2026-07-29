@@ -66,7 +66,6 @@ export function parseIxmlInfo(view, chunkStart, chunkSize) {
   const timestampSampleRate = readIxmlField(view, chunkStart, "TIMESTAMP_SAMPLE_RATE");
   const timecodeRate = readIxmlField(view, chunkStart, "TIMECODE_RATE");
   const timecodeFlag = readIxmlField(view, chunkStart, "TIMECODE_FLAG");
-  if (!timestampHi && !timestampLo && !timestampSampleRate && !timecodeRate && !timecodeFlag && !Object.keys(fields).length) return null;
   return {
     chunkStart,
     chunkSize,

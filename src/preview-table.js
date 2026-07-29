@@ -45,6 +45,7 @@ export function createPreviewTableRenderer({
     if (source === "iXML" || source === "ALE/CSV") return "fps-badge ixml";
     if (source === "LTC检测") return "fps-badge ltc";
     if (source === "视频元数据") return "fps-badge video";
+    if (source === "FPS预览") return "fps-badge preview";
     return "fps-badge";
   }
 
@@ -146,6 +147,7 @@ export function createPreviewTableRenderer({
     const sampleOffsets = new Set();
     const fallbackFps = defaultDisplayFps();
     const previewByName = new Map(previews.map(preview => [recordKey(preview), preview]));
+    const isFpsMetadataPreview = previews.some(preview => preview.operation === "fps-metadata");
     const showLtc = Array.from(ltcResults.values()).some(result => result.status !== "idle");
     const groups = recordsByGroup();
 
@@ -180,11 +182,16 @@ export function createPreviewTableRenderer({
         const preview = previewByName.get(recordKey(record));
         const ltc = ltcResults.get(recordKey(record));
         const ltcFps = ltcFpsDisplay(ltc);
-        const fps = preview?.fps || ltcFps?.fps || recordFps(record);
+        const rowIsFpsMetadataPreview = preview?.operation === "fps-metadata";
+        const oldFps = rowIsFpsMetadataPreview
+          ? preview.oldFps
+          : preview?.fps || ltcFps?.fps || recordFps(record);
+        const newFps = preview?.fps || oldFps;
+        const showUnchangedFpsRow = isFpsMetadataPreview && !preview;
         const fpsSource = preview?.fpsSource || ltcFps?.source || recordFpsSource(record);
         const recordWasChanged = changedTimeReferences.get(recordKey(record)) === record.oldTimeReference;
         sampleRates.add(record.sampleRate);
-        if (preview) sampleOffsets.add(preview.sampleOffset.toString());
+        if (preview && !rowIsFpsMetadataPreview) sampleOffsets.add(preview.sampleOffset.toString());
         const row = document.createElement("tr");
         row.dataset.recordKey = recordKey(record);
         row.addEventListener("click", event => toggleRecordSelection(record, event));
@@ -196,12 +203,20 @@ export function createPreviewTableRenderer({
           record.channels || "-",
           record.bitsPerSample || "-",
           preview?.fpsDisplay || ltcFps?.display || recordFpsDisplay(record),
-          samplesToTimecode(record.oldTimeReference, record.sampleRate || 48000, fps, { wrapDay: true }),
-          preview ? samplesToTimecode(preview.newTimeReference, record.sampleRate || 48000, fps, { wrapDay: true }) : "待预览",
-          samplesToTimecode(record.oldTimeReference + record.durationSamples, record.sampleRate || 48000, fps, { wrapDay: true }),
-          preview ? samplesToTimecode(preview.newTimeReference + record.durationSamples, record.sampleRate || 48000, fps, { wrapDay: true }) : "待预览",
+          samplesToTimecode(record.oldTimeReference, record.sampleRate || 48000, oldFps, { wrapDay: true }),
+          preview
+            ? samplesToTimecode(preview.newTimeReference, record.sampleRate || 48000, newFps, { wrapDay: true })
+            : showUnchangedFpsRow
+              ? samplesToTimecode(record.oldTimeReference, record.sampleRate || 48000, oldFps, { wrapDay: true })
+              : "待预览",
+          samplesToTimecode(record.oldTimeReference + record.durationSamples, record.sampleRate || 48000, oldFps, { wrapDay: true }),
+          preview
+            ? samplesToTimecode(preview.newTimeReference + record.durationSamples, record.sampleRate || 48000, newFps, { wrapDay: true })
+            : showUnchangedFpsRow
+              ? samplesToTimecode(record.oldTimeReference + record.durationSamples, record.sampleRate || 48000, oldFps, { wrapDay: true })
+              : "待预览",
           record.oldTimeReference,
-          preview ? preview.newTimeReference : "待预览",
+          preview ? preview.newTimeReference : showUnchangedFpsRow ? record.oldTimeReference : "待预览",
           ltc ? ltcStartTimecode(ltc, record) : "待检测",
           ltc ? ltcStatusText(ltc, record, fallbackFps) : "待检测",
           formatDuration(record.durationSamples, record.sampleRate || 48000),
@@ -222,7 +237,7 @@ export function createPreviewTableRenderer({
             td.textContent = String(cell);
           }
           if ([5, 6, 7, 8, 9, 10, 11].includes(index)) td.classList.add("mono");
-          if (!preview && [6, 8, 10].includes(index)) td.classList.add("pending");
+          if (!preview && !showUnchangedFpsRow && [6, 8, 10].includes(index)) td.classList.add("pending");
           if (preview && [6, 8, 10].includes(index)) td.classList.add("new-value");
           if (!preview && recordWasChanged && [5, 7].includes(index)) td.classList.add("ltc-value-ok");
           if ([11, 12].includes(index)) td.classList.add("ltc-col");
@@ -238,7 +253,19 @@ export function createPreviewTableRenderer({
         const pill = document.createElement("span");
         const hasOp = preview || recordWasChanged || recordWasCombined;
         pill.className = hasOp ? "pill ok" : "pill idle";
-        if (preview && !recordWasCombined) {
+        if (rowIsFpsMetadataPreview) {
+          if (preview.fpsAction === "update-ixml") {
+            pill.textContent = "待更新 iXML";
+          } else if (preview.fpsAction === "create-ixml") {
+            pill.textContent = "将创建 iXML";
+          } else if (preview.fpsAction === "skip-missing-ixml") {
+            pill.className = "pill warn";
+            pill.textContent = "跳过：无 iXML";
+          } else {
+            pill.className = "pill idle";
+            pill.textContent = "无需更改";
+          }
+        } else if (preview && !recordWasCombined) {
           pill.textContent = "Ready";
         } else if (recordWasChanged && recordWasCombined) {
           pill.textContent = "已更改并合并";
@@ -262,12 +289,19 @@ export function createPreviewTableRenderer({
     els.offsetFrames.textContent = activeOffset ? activeOffset.frames.toString() : "-";
     els.offsetSamples.textContent = sampleOffsets.size ? Array.from(sampleOffsets).join(", ") : "-";
     els.sampleRates.textContent = sampleRates.size ? Array.from(sampleRates).join(", ") : "-";
-    els.phasePill.textContent = previews.length ? "修改预览" : "原始信息";
+    els.phasePill.textContent = isFpsMetadataPreview ? "帧率预览" : previews.length ? "修改预览" : "原始信息";
     els.extractLtcBtn.disabled = records.length === 0;
     if (els.clearListBtn) els.clearListBtn.disabled = records.length === 0;
-    els.combinePolyBtn.disabled = combineEligibleGroups().length === 0;
-    els.writeLtcBtn.disabled = !Array.from(ltcResults.values()).some(canWriteLtcResult);
-    els.exportMetadataBtn.disabled = resolveMetadataItems().length === 0;
+    if (els.fpsMetadataBtn) {
+      els.fpsMetadataBtn.disabled = !records.some(record =>
+        !record._meta &&
+        !record._video &&
+        typeof record.fileHandle?.createWritable === "function"
+      );
+    }
+    els.combinePolyBtn.disabled = isFpsMetadataPreview || combineEligibleGroups().length === 0;
+    els.writeLtcBtn.disabled = isFpsMetadataPreview || !Array.from(ltcResults.values()).some(canWriteLtcResult);
+    els.exportMetadataBtn.disabled = isFpsMetadataPreview || resolveMetadataItems().length === 0;
     updateSelectionUi();
   }
 

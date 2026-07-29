@@ -31,7 +31,7 @@
       </div>
       <div class="calc-expression">
         <label class="calc-fps-field">
-          帧率
+          显示 / 计算帧率
           <div class="select-field" data-select>
             <select id="fpsInput" aria-label="frame rate">
               <option value="23.976">23.976</option>
@@ -139,6 +139,7 @@
         <button id="applyBtn" class="danger" title="写入" disabled>写入</button>
         <button id="undoBtn" title="撤销上一次写入" disabled>撤销</button>
         <button id="exportMetadataBtn" type="button" disabled>导出为元数据</button>
+        <button id="fpsMetadataBtn" type="button" disabled>修改文件FPS</button>
         <button id="combinePolyBtn" type="button" disabled>合并Poly</button>
       </div>
 
@@ -234,6 +235,77 @@
       </div>
     </div>
   </div>
+  <div id="fpsMetadataOverlay" aria-hidden="true">
+    <div class="fps-metadata-dialog" role="dialog" aria-modal="true" aria-labelledby="fpsMetadataTitle">
+      <div class="confirm-title" id="fpsMetadataTitle">修改 WAV 帧率元数据</div>
+      <div class="fps-dialog-grid">
+        <fieldset class="fps-scope-fieldset">
+          <legend>修改范围</legend>
+          <label class="fps-radio-option">
+            <input id="fpsScopeSelected" type="radio" name="fpsMetadataScope" value="selected">
+            <span id="fpsScopeSelectedLabel">已选中的 WAV</span>
+          </label>
+          <label class="fps-radio-option">
+            <input id="fpsScopeAll" type="radio" name="fpsMetadataScope" value="all" checked>
+            <span id="fpsScopeAllLabel">列表中的全部 WAV</span>
+          </label>
+        </fieldset>
+
+        <div class="fps-current-block">
+          <div class="fps-dialog-label">当前帧率</div>
+          <div id="fpsMetadataSummary" class="fps-summary"></div>
+        </div>
+
+        <label>
+          目标帧率
+          <select id="fpsMetadataTarget" aria-label="target file FPS">
+            <option value="23.976">23.976 NDF</option>
+            <option value="24">24.00 NDF</option>
+            <option value="25">25.00 NDF</option>
+            <option value="29.97">29.97 NDF</option>
+            <option value="29.97df">29.97 DF</option>
+            <option value="30">30.00 NDF</option>
+            <option value="48">48.00 NDF</option>
+            <option value="50">50.00 NDF</option>
+            <option value="59.94">59.94 NDF</option>
+            <option value="59.94df">59.94 DF</option>
+            <option value="60">60.00 NDF</option>
+            <option value="96">96.00 NDF</option>
+            <option value="100">100.00 NDF</option>
+            <option value="119.88">119.88 NDF</option>
+            <option value="119.88df">119.88 DF</option>
+            <option value="120">120.00 NDF</option>
+          </select>
+        </label>
+
+        <div class="fps-mode-note">
+          <strong>仅修改 iXML 帧率标签</strong>
+          <span>TimeReference、音频采样率、音频内容和文件时长保持不变。</span>
+        </div>
+
+        <fieldset class="fps-scope-fieldset fps-missing-fieldset">
+          <legend>缺少 iXML 的文件</legend>
+          <label class="fps-radio-option">
+            <input id="fpsMissingIxmlSkip" type="radio" name="fpsMissingIxmlPolicy" value="skip" checked>
+            <span>跳过（推荐）</span>
+          </label>
+          <label class="fps-radio-option">
+            <input id="fpsMissingIxmlCreate" type="radio" name="fpsMissingIxmlPolicy" value="create">
+            <span>创建 iXML SPEED</span>
+          </label>
+        </fieldset>
+
+        <div class="fps-preview-example">
+          <div class="fps-dialog-label">修改后显示示例</div>
+          <div id="fpsMetadataExample" class="fps-example-copy"></div>
+        </div>
+      </div>
+      <div class="confirm-actions">
+        <button id="fpsMetadataCancelBtn" type="button">取消</button>
+        <button id="fpsMetadataPreviewBtn" class="primary" type="button">生成预览</button>
+      </div>
+    </div>
+  </div>
   <div id="toast">✅ 写入完成</div>
 
   <script>
@@ -273,6 +345,7 @@
     import { initCustomSelect } from "./src/custom-select.js";
     import { createFileImportController } from "./src/file-import.js";
     import { createFpsMetadataController } from "./src/fps-metadata.js";
+    import { createFpsWriteController } from "./src/fps-write-controller.js";
     import { createLtcController } from "./src/ltc-controller.js";
     import { createDialogController } from "./src/dialogs.js";
     import { createCalculatorController } from "./src/calculator.js";
@@ -331,6 +404,7 @@
       extractLtcBtn: document.getElementById("extractLtcBtn"),
       extractLtcFallbackBtn: document.getElementById("extractLtcFallbackBtn"),
       exportMetadataBtn: document.getElementById("exportMetadataBtn"),
+      fpsMetadataBtn: document.getElementById("fpsMetadataBtn"),
       combinePolyBtn: document.getElementById("combinePolyBtn"),
       writeLtcBtn: document.getElementById("writeLtcBtn"),
       muteLtcInput: document.getElementById("muteLtcInput"),
@@ -360,6 +434,18 @@
       confirmCancelBtn: document.getElementById("confirmCancelBtn"),
       confirmAltBtn: document.getElementById("confirmAltBtn"),
       confirmWriteBtn: document.getElementById("confirmWriteBtn"),
+      fpsMetadataOverlay: document.getElementById("fpsMetadataOverlay"),
+      fpsScopeSelected: document.getElementById("fpsScopeSelected"),
+      fpsScopeAll: document.getElementById("fpsScopeAll"),
+      fpsScopeSelectedLabel: document.getElementById("fpsScopeSelectedLabel"),
+      fpsScopeAllLabel: document.getElementById("fpsScopeAllLabel"),
+      fpsMetadataSummary: document.getElementById("fpsMetadataSummary"),
+      fpsMetadataTarget: document.getElementById("fpsMetadataTarget"),
+      fpsMissingIxmlSkip: document.getElementById("fpsMissingIxmlSkip"),
+      fpsMissingIxmlCreate: document.getElementById("fpsMissingIxmlCreate"),
+      fpsMetadataExample: document.getElementById("fpsMetadataExample"),
+      fpsMetadataCancelBtn: document.getElementById("fpsMetadataCancelBtn"),
+      fpsMetadataPreviewBtn: document.getElementById("fpsMetadataPreviewBtn"),
     };
     const { chooseMetadataFormat, showConfirmDialog } = createDialogController(els);
     const uiState = createUiStateController({ els });
@@ -580,7 +666,30 @@
       renderRows,
     });
 
+    const fpsWrite = createFpsWriteController({
+      els,
+      getRecords: () => records,
+      getSelectedRecordKeys: () => selectedRecordKeys,
+      getPreviews: () => previews,
+      setPreviews: next => { previews = next; },
+      setActiveOffset: next => { activeOffset = next; },
+      getLastUndoBatch: () => lastUndoBatch,
+      setLastUndoBatch: next => { lastUndoBatch = next; },
+      recordFps,
+      recordFpsDisplay,
+      fpsSelectLabel,
+      samplesToTimecode,
+      showConfirmDialog,
+      refreshRecordsFromHandles: timeReferenceWrite.refreshRecordsFromHandles,
+      setChangedTimeReferences: next => { changedTimeReferences = next; },
+      setState,
+      updateWriteProgress,
+      renderRows,
+      log,
+    });
+
     function invalidatePreview() {
+      fpsWrite.resetPreviewMode();
       if (!records.length || !previews.length) {
         renderRows();
         return;
@@ -610,8 +719,10 @@
       els.extractLtcBtn.disabled = true;
       els.extractLtcFallbackBtn.disabled = true;
       els.exportMetadataBtn.disabled = true;
+      els.fpsMetadataBtn.disabled = true;
       els.combinePolyBtn.disabled = true;
       els.writeLtcBtn.disabled = true;
+      fpsWrite.resetPreviewMode();
       setState("待机");
       els.statusLine.textContent = "拖入 WAV / MOV / MP4 / ALE / CSV 文件后显示原始信息";
       log("List cleared.");
@@ -636,6 +747,7 @@
         return;
       }
       refreshTakeGroups();
+      if (!fpsWrite.previewIsFpsMetadata()) fpsWrite.resetPreviewMode();
       els.applyBtn.disabled = previews.length === 0;
       els.undoBtn.disabled = !lastUndoBatch;
       els.previewBtn.disabled = false;
@@ -647,9 +759,16 @@
       renderRows();
     }
 
-    els.previewBtn.addEventListener("click", () => guarded(timeReferenceWrite.runPreview));
-    els.applyBtn.addEventListener("click", () => guarded(timeReferenceWrite.applyChanges));
-    els.undoBtn.addEventListener("click", () => guarded(timeReferenceWrite.undoLastWrite));
+    els.previewBtn.addEventListener("click", () => guarded(async () => {
+      fpsWrite.resetPreviewMode();
+      await timeReferenceWrite.runPreview();
+    }));
+    els.applyBtn.addEventListener("click", () => guarded(
+      fpsWrite.previewIsFpsMetadata() ? fpsWrite.applyChanges : timeReferenceWrite.applyChanges
+    ));
+    els.undoBtn.addEventListener("click", () => guarded(
+      lastUndoBatch?.type === "fps-metadata" ? fpsWrite.undoLastWrite : timeReferenceWrite.undoLastWrite
+    ));
     els.extractLtcBtn.addEventListener("click", () => guarded(ltcController.extractLtcFromFiles));
     els.extractLtcFallbackBtn.addEventListener("click", () => guarded(() => ltcController.extractLtcFromFiles({
       allowSoftSync: true,
@@ -662,6 +781,7 @@
     els.clearListBtn.addEventListener("click", () => guarded(resetListState));
     calculator.bindEvents({ guarded });
     offsetInput.bindEvents();
+    fpsWrite.bindEvents({ guarded });
 
     initCustomSelect(els.fpsInput, els.fpsSelectButton, els.fpsSelectMenu);
 
