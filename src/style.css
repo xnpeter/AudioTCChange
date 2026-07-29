@@ -1399,8 +1399,158 @@ footer .github-link svg {
   height: 16px;
 }
 footer .copyright {
+  margin: 0;
   font-size: 12px;
   color: var(--muted);
+}
+
+/* Keep the complete workspace and footer visible on common 16:9 desktop screens. */
+@media (min-width: 1100px) and (max-height: 1100px) {
+  .app {
+    grid-template-rows: auto auto auto auto auto;
+    align-content: start;
+  }
+
+  .calculator {
+    margin-top: 24px;
+    margin-bottom: 10px;
+    padding: 14px;
+    gap: 10px;
+  }
+
+  main {
+    padding-top: 14px;
+    padding-bottom: 8px;
+    gap: 12px;
+  }
+
+  .stat {
+    min-height: 62px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .stat span {
+    margin-bottom: 4px;
+  }
+
+  .table-head {
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .table-wrap {
+    min-height: 180px;
+  }
+
+  .empty {
+    height: 140px;
+    gap: 10px;
+  }
+
+  .empty::before {
+    width: 46px;
+    height: 46px;
+    font-size: 24px;
+    line-height: 40px;
+  }
+
+  .log {
+    min-height: 38px;
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  footer {
+    padding-top: 5px;
+    padding-bottom: 7px;
+  }
+
+  footer .footer-inner {
+    gap: 3px;
+  }
+}
+
+@media (min-width: 1100px) and (max-height: 800px) {
+  header {
+    padding-top: 12px;
+    padding-bottom: 12px;
+  }
+
+  .calculator {
+    margin-top: 14px;
+    margin-bottom: 8px;
+    padding-top: 10px;
+    padding-bottom: 10px;
+  }
+
+  .toolbar {
+    padding: 10px;
+    gap: 8px 12px;
+  }
+
+  main {
+    padding-top: 10px;
+    padding-bottom: 4px;
+    gap: 8px;
+  }
+
+  .stat {
+    min-height: 54px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  .stat span {
+    margin-bottom: 2px;
+  }
+
+  .table-head {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .table-wrap {
+    min-height: 90px;
+  }
+
+  .empty {
+    height: 72px;
+    min-height: 72px;
+    flex-direction: row;
+    gap: 10px;
+    font-size: 15px;
+  }
+
+  .empty::before {
+    flex: 0 0 auto;
+    width: 34px;
+    height: 34px;
+    font-size: 19px;
+    line-height: 28px;
+  }
+
+  .log {
+    min-height: 34px;
+    padding-top: 6px;
+    padding-bottom: 6px;
+  }
+
+  footer {
+    padding-top: 2px;
+    padding-bottom: 2px;
+  }
+
+  footer .footer-inner {
+    flex-direction: row;
+    justify-content: center;
+    gap: 0;
+  }
+
+  footer .github-link::after {
+    content: "·";
+    margin: 0 7px;
+  }
 }
 #progressOverlay {
   position: fixed; inset: 0;
