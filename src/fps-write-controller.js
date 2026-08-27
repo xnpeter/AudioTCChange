@@ -109,7 +109,7 @@ export function createFpsWriteController({
       const row = document.createElement("div");
       row.className = "fps-summary-row";
       const name = document.createElement("span");
-      name.textContent = "未写入帧率 metadata";
+      name.textContent = "无 iXML 帧率";
       const value = document.createElement("span");
       value.textContent = `${missing} 个`;
       row.append(name, value);
